@@ -1,10 +1,13 @@
 package database
 
 import (
+	"BackendTemplate/pkg/logger"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"os"
 	"reflect"
+
+	_ "github.com/mattn/go-sqlite3"
 	"xorm.io/xorm"
 )
 
@@ -73,6 +76,11 @@ type WebDelivery struct {
 	Status         int
 	ServerAddress  string
 	FileName       string
+	Pass           string
+}
+type Settings struct {
+	Name  string
+	Value string
 }
 
 func ConnectDateBase() {
@@ -81,7 +89,7 @@ func ConnectDateBase() {
 	if err != nil {
 		log.Fatalf("连接sqlite3数据库失败: %v", err)
 	}
-	err = Engine.Sync2(new(Users), new(Clients), new(Notes), new(Shell), new(Downloads), new(Listener), new(WebDelivery), new(Socks5))
+	err = Engine.Sync2(new(Users), new(Clients), new(Notes), new(Shell), new(Downloads), new(Listener), new(WebDelivery), new(Socks5), new(Settings))
 	if err != nil {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
@@ -99,7 +107,21 @@ func ConnectDateBase() {
 
 		err = InsertData(Engine, defaultUser)
 		if err != nil {
-			log.Fatalf("插入默认 admin 用户失败: %v", err)
+			logger.Error(fmt.Sprintf("插入默认 admin 用户失败: %v", err))
+			os.Exit(0)
+		}
+	}
+	var Setting Settings
+	exists, err = Engine.Where("name=?", "wecom").Get(&Setting)
+	if !exists {
+		defaultSetting := &Settings{
+			Name:  "wecom",
+			Value: "",
+		}
+		err = InsertData(Engine, defaultSetting)
+		if err != nil {
+			logger.Error(err.Error())
+			os.Exit(0)
 		}
 	}
 }

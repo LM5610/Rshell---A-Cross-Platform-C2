@@ -32,6 +32,21 @@ func AddListener(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "data": "Listener already exists"})
 		return
 	}
+	ports := strings.Split(listener.ListenAddress, ":")
+	var port string
+	if len(ports) == 2 {
+		port = ports[1]
+	} else if len(ports) == 1 {
+		port = ports[0]
+	}
+	inUse, err := isPortInUse(port)
+	if err != nil {
+		fmt.Printf("检测端口 %s 时发生错误: %v\n", port, err)
+	}
+	if inUse {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "data": port + "端口被占用"})
+		return
+	}
 	database.Engine.Insert(&database.Listener{Type: listener.Type, ListenAddress: listener.ListenAddress, ConnectAddress: listener.ConnectAddress, Status: 1})
 	c.JSON(http.StatusOK, gin.H{"status": 200, "data": "Listener added"})
 	go handleOpenPort(listener.Type, listener.ListenAddress)
@@ -51,10 +66,24 @@ func OpenListener(c *gin.Context) {
 	}
 	var lis database.Listener
 	database.Engine.Where("listen_address = ?", listener.ListenAddress).Get(&lis)
+	ports := strings.Split(listener.ListenAddress, ":")
+	var port string
+	if len(ports) == 2 {
+		port = ports[1]
+	} else if len(ports) == 1 {
+		port = ports[0]
+	}
+	inUse, err := isPortInUse(port)
+	if err != nil {
+		fmt.Printf("检测端口 %s 时发生错误: %v\n", port, err)
+	}
+	if inUse {
+		c.JSON(http.StatusOK, gin.H{"status": 400, "data": port + "端口被占用"})
+		return
+	}
 	if lis.Status == 2 {
-		database.Engine.Where("listen_address = ?", listener.ListenAddress).Update(&database.Listener{Status: 1})
-
 		go handleOpenPort(lis.Type, listener.ListenAddress)
+		database.Engine.Where("listen_address = ?", listener.ListenAddress).Update(&database.Listener{Status: 1})
 		c.JSON(http.StatusOK, gin.H{"status": 200, "data": "Listener opened"})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "data": "Listener already opened"})
@@ -112,7 +141,8 @@ func handleOpenPort(listenerType string, listenerAddress string) {
 		connection.HttpServer[listenerAddress] = server
 		connection.MuClientListenerType.Unlock()
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			log.Printf("listen: %s\n", err)
+			return
 		}
 
 	case "tcp":

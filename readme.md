@@ -28,7 +28,7 @@ Rshell是一款开源的golang编写的支持多平台的C2框架，旨在帮助
 
 支持windows、linux（darwin未充分测试）
 
-**注：客户端需要加上反沙箱默认密码上线  如： r.exe tNROopcR45q4Z8I1**
+**注：客户端需要加上反沙箱默认密码上线  如： r.exe tNROopcR45q4Z8I1  （密码支持自定义）**
 
 ![image-20250811122429552](./assets/image-20250811122429552.png)
 
@@ -69,6 +69,46 @@ Rshell是一款开源的golang编写的支持多平台的C2框架，旨在帮助
 ### 笔记
 
 ![image-20250811123203135](./assets/image-20250811123203135.png)
+
+## Windows相关
+
+### shellcode生成：
+
+新增windows的webdelivery后，可以生成stage分阶段的shellcode（体积较小，方便上线）：
+
+![image-20250902101115025](./assets/image-20250902101115025.png)
+
+### 内存执行
+
+windows内存执行 支持Execute Assembly(.net程序内存执行)、Inline Bin(其他exe程序内存执行)、shellcode执行(执行shellcode,方便上线其他C2等)：
+
+![image-20250902103025182](./assets/image-20250902103025182.png)
+
+#### execute-assembly
+
+执行badpotato提权：
+
+![image-20250902103434699](./assets/image-20250902103434699.png)
+
+![image-20250902103211593](./assets/image-20250902103211593.png)
+
+#### inline-bin
+
+内存执行fscan：
+
+![image-20250902105312771](./assets/image-20250902105312771.png)
+
+mimikatz：
+
+![image-20250902110428454](./assets/image-20250902110428454.png)
+
+#### shellcode-inject
+
+上线msf：
+
+![image-20250902105352776](./assets/image-20250902105352776.png)
+
+![image-20250902105406612](./assets/image-20250902105406612.png)
 
 # 相关项目
 

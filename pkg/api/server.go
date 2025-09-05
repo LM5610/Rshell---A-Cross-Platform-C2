@@ -20,6 +20,7 @@ func GenServer(c *gin.Context) {
 		OsType   string `json:"osType"`
 		ArchType string `json:"archType"`
 		Listener string `json:"listener"`
+		Pass     string `json:"pass"`
 	}
 	if err := c.BindJSON(&serverBody); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -65,6 +66,9 @@ func GenServer(c *gin.Context) {
 
 		modifiedData = bytes.ReplaceAll(binaryData, []byte(oldStr), []byte(newStr))
 	}
+	oldPass := "PASSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	newPass := padRight(serverBody.Pass, len(oldPass))
+	modifiedData = bytes.ReplaceAll(modifiedData, []byte(oldPass), []byte(newPass))
 
 	// 设置响应头
 	c.Header("Content-Description", "File Transfer")

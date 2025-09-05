@@ -37,16 +37,20 @@ func Socks5Start(c *gin.Context) {
 	inUse, err := isPortInUse(listenPort)
 	if err != nil {
 		fmt.Printf("检测端口 %s 时发生错误: %v\n", listenPort, err)
+		return
 	}
 	if inUse {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "data": listenPort + "端口被占用"})
+		return
 	}
 	inUse, err = isPortInUse(socks5Body.Socks5port)
 	if err != nil {
 		fmt.Printf("检测端口 %s 时发生错误: %v\n", socks5Body.Socks5port, err)
+		return
 	}
 	if inUse {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "data": socks5Body.Socks5port + "端口被占用"})
+		return
 	}
 
 	database.Engine.Insert(&database.Socks5{Type: "socks5", Uid: socks5Body.Uid, ConnectAddress: socks5Body.ConnectAddress, Socks5port: socks5Body.Socks5port, UserName: socks5Body.UserName, Password: socks5Body.Password, Status: 1})
@@ -73,6 +77,7 @@ func Socks5Open(c *gin.Context) {
 	}
 	if inUse {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "data": listenPort + "端口被占用"})
+		return
 	}
 	inUse, err = isPortInUse(socks5Body.Socks5port)
 	if err != nil {
@@ -80,6 +85,7 @@ func Socks5Open(c *gin.Context) {
 	}
 	if inUse {
 		c.JSON(http.StatusOK, gin.H{"status": 400, "data": socks5Body.Socks5port + "端口被占用"})
+		return
 	}
 	database.Engine.Where("uid = ? AND connect_address = ? AND socks5port = ? AND user_name = ? AND password = ?", socks5Body.Uid, socks5Body.ConnectAddress, socks5Body.Socks5port, socks5Body.UserName, socks5Body.Password).Update(&database.Socks5{Status: 1})
 
